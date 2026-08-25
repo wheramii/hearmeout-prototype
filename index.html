@@ -42,7 +42,7 @@
   .unknown-badge{ display:inline-flex; align-items:center; justify-content:center; width:16px; height:16px; border-radius:50%; border:1.4px solid var(--lime); color:var(--lime); font-size:10px; font-weight:700; margin-right:6px; font-family:'IBM Plex Mono',monospace; flex-shrink:0; }
 
   .cover{ cursor:pointer; }
-  .cover .art{ border-radius:12px; display:flex; align-items:flex-end; justify-content:flex-start; padding:8px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:rgba(255,255,255,.85); background-size:cover; background-position:center; border:1px solid var(--line); }
+  .cover .art{ position:relative; border-radius:12px; display:flex; align-items:flex-end; justify-content:flex-start; padding:8px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:rgba(255,255,255,.85); background-size:cover; background-position:center; border:1px solid var(--line); }
   .cover .meta{ margin-top:7px; }
   .cover .meta .t{ font-weight:600; line-height:1.25; }
   .cover .meta .a{ color:var(--muted); margin-top:1px; }
@@ -560,7 +560,7 @@ function renderCatalog(device){
   return `${searchBarHTML}${chipsHTML}
     ${recapTeaserHTML()}
     <div class="section-head"><h2>🔥 Топ-20 за месяц</h2><span>Deezer, живые данные</span></div>
-    <div class="row-scroll" data-deezer-chart><div class="archive-loading">Загружаю чарт…</div></div>
+    <div class="${rowClass}" data-deezer-chart><div class="archive-loading">Загружаю чарт…</div></div>
     <div class="section-head"><h2>Высокие оценки</h2><span>${topRated.length}</span></div>
     <div class="${rowClass}">${topRated.map(albumCardHTML).join('')}</div>
 
@@ -601,10 +601,9 @@ function renderAlbum(device, albumId){
         <div><div class="num">${a.rating.toFixed(1)}</div><div class="rd">${a.ratingsCount.toLocaleString('ru-RU')} оценок</div></div>
         ${starsAvgHTML(a.rating)}
       </div>
-      ${spotifyEmbedHTML(a)}
       <div class="dz-preview-wrap">
-        <button class="btn-ghost" style="margin-bottom:8px;" data-load-preview="${a.id}" data-artist="${esc(a.artist)}" data-title="${esc(a.title)}">🔊 Найти превью на Deezer</button>
-        <div class="dz-preview-player" data-preview-for="${a.id}"></div>
+        <div class="dz-preview-label" style="margin-bottom:8px; display:flex; align-items:center; gap:6px;"><span style="color:var(--lime);">●</span> Предпрослушивание · без рекламы</div>
+        <div class="dz-preview-player" data-preview-for="${a.id}" data-preview-auto="${a.id}" data-artist="${esc(a.artist)}" data-title="${esc(a.title)}"><div class="archive-loading">Загружаю превью…</div></div>
       </div>
       <button class="btn-primary" data-rate-cta="${a.id}">Оценить альбом</button>
       <button class="btn-ghost" data-wishlist>+ В список «Хочу послушать»</button>
@@ -631,10 +630,9 @@ function renderAlbum(device, albumId){
           <div><div class="num">${a.rating.toFixed(1)}</div><div class="rd">${a.ratingsCount.toLocaleString('ru-RU')} оценок</div></div>
           ${starsAvgHTML(a.rating)}
         </div>
-        <div style="max-width:420px;">${spotifyEmbedHTML(a)}</div>
         <div class="dz-preview-wrap" style="max-width:420px;">
-          <button class="btn-ghost" style="margin-bottom:8px;" data-load-preview="${a.id}" data-artist="${esc(a.artist)}" data-title="${esc(a.title)}">🔊 Найти превью на Deezer</button>
-          <div class="dz-preview-player" data-preview-for="${a.id}"></div>
+          <div class="dz-preview-label" style="margin-bottom:8px; display:flex; align-items:center; gap:6px;"><span style="color:var(--lime);">●</span> Предпрослушивание · без рекламы</div>
+          <div class="dz-preview-player" data-preview-for="${a.id}" data-preview-auto="${a.id}" data-artist="${esc(a.artist)}" data-title="${esc(a.title)}"><div class="archive-loading">Загружаю превью…</div></div>
         </div>
         <div class="d-two-col">
           <div><div class="section-head"><h2>Треклист</h2><span>${a.tracklist.length ? a.tracklist.length + " треков" : ""}</span></div>${tracklistHTML}</div>
@@ -1123,6 +1121,8 @@ function renderScreen(name){
     if(chartEl) fetchDeezerChart(chartEl);
     const artistPhotoEls = container.querySelectorAll('[data-artist-photo-for]');
     artistPhotoEls.forEach(el=> fetchDeezerArtistPhoto(el.dataset.artistPhotoFor, el));
+    const previewEl = container.querySelector('[data-preview-auto]');
+    if(previewEl) loadTrackPreview(previewEl.dataset.title, previewEl.dataset.artist, previewEl);
   });
 }
 function renderAll(){ ['catalog','album','rate','history','recap','profile','artist','friend'].forEach(renderScreen); }
@@ -1192,13 +1192,6 @@ function wireScreen(container, name){
   container.querySelectorAll('[data-back-catalog]').forEach(b=> b.addEventListener('click', ()=> showScreen('catalog')));
   container.querySelectorAll('[data-back-dynamic]').forEach(b=> b.addEventListener('click', ()=> showScreen(STATE.rateOrigin==='history' ? 'history' : 'album')));
   container.querySelectorAll('[data-rate-cta]').forEach(b=> b.addEventListener('click', ()=> openRateFor(b.dataset.rateCta, 'album')));
-  container.querySelectorAll('[data-load-preview]').forEach(b=>{
-    b.addEventListener('click', ()=>{
-      const id = b.dataset.loadPreview;
-      const playerEl = container.querySelector(`[data-preview-for="${id}"]`);
-      if(playerEl) loadTrackPreview(b.dataset.title, b.dataset.artist, playerEl);
-    });
-  });
   container.querySelectorAll('[data-edit-rating]').forEach(el=> el.addEventListener('click', ()=> openRateFor(el.dataset.editRating, 'history')));
   container.querySelectorAll('[data-open-artist]').forEach(el=>{
     el.addEventListener('click', ()=> openArtist(el.dataset.openArtist, el.dataset.artistName));
